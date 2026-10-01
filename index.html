@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microbi 3.0 - Simulador Von Neumann Avançat</title>
+    <title>Microbi 3.0 - Simulador Von Neumann Operatiu</title>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -130,7 +130,7 @@
 
         .memory-grid {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 4px;
             flex: 1;
             overflow-y: auto;
@@ -144,10 +144,8 @@
             padding: 6px 2px;
             border-radius: 3px;
             border: 1px solid #1e293b;
-            cursor: pointer;
         }
         .mem-cell.pc-highlight { border: 1px solid var(--accent-blue); background: #0c4a6e; }
-        .mem-cell.mar-highlight { border: 1px solid var(--accent-red); }
 
         .log-box {
             flex: 1;
@@ -157,7 +155,7 @@
             font-size: 12px;
             color: #cbd5e1;
             overflow-y: auto;
-            max-height: 200px;
+            max-height: 150px;
         }
 
         .console-error { color: var(--accent-red); }
@@ -174,15 +172,13 @@
 <div class="main-layout">
     <div class="panel">
         <div class="panel-title">📝 Editor d'Assemblador (ASM)</div>
-        <textarea id="asmCode" spellcheck="false">
-; Programa d'exemple: Multiplicació Avançada
+        <textarea id="asmCode" spellcheck="false">; Multiplica 12 x 5 utilitzant adreces de memòria
 LDA #12
-STA [30]
+STA [20]
 LDA #5
-MUL [30]
+MUL [20]
 OUT 0
-HLT
-        </textarea>
+HLT</textarea>
         <div class="controls">
             <button onclick="assembleCode()">Assemblar</button>
             <button class="step" onclick="cpuStep()">STEP</button>
@@ -196,18 +192,17 @@ HLT
     <div class="panel">
         <div class="panel-title">💻 Estat del Processador (CPU)</div>
         <div class="registers-grid">
-            <div class="reg-box"><div class="reg-label">PC</div><div class="reg-val" id="regPC">00</div></div>
-            <div class="reg-box"><div class="reg-label">IR</div><div class="reg-val" id="regIR">00</div></div>
-            <div class="reg-box"><div class="reg-label">AC</div><div class="reg-val" id="regAC">00</div></div>
-            <div class="reg-box"><div class="reg-label">X</div><div class="reg-val" id="regX">00</div></div>
+            <div class="reg-box"><div class="reg-label">PC (Program Counter)</div><div class="reg-val" id="regPC">00</div></div>
+            <div class="reg-box"><div class="reg-label">IR (Instruction Reg)</div><div class="reg-val" id="regIR">00</div></div>
+            <div class="reg-box"><div class="reg-label">AC (Accumulator)</div><div class="reg-val" id="regAC">00</div></div>
             <div class="reg-box"><div class="reg-label">MAR</div><div class="reg-val" id="regMAR">00</div></div>
             <div class="reg-box"><div class="reg-label">MDR</div><div class="reg-val" id="regMDR">00</div></div>
         </div>
         <div class="panel-title" style="font-size:14px;">Flags d'Estat</div>
         <div class="flags-container">
-            <span class="flag" id="flagZ">Z</span>
-            <span class="flag" id="flagN">N</span>
-            <span class="flag" id="flagE">E</span>
+            <span class="flag" id="flagZ">Z (Zero)</span>
+            <span class="flag" id="flagN">N (Negatiu)</span>
+            <span class="flag" id="flagE">E (Error)</span>
         </div>
         <div class="panel-title" style="font-size:14px;">Historial de Logs</div>
         <div class="log-box" id="logBox">Sistema preparat.</div>
@@ -216,7 +211,7 @@ HLT
     <div class="panel">
         <div class="panel-title">💾 Mapa de Memòria (RAM)</div>
         <div class="memory-grid" id="memGrid"></div>
-        <div class="panel-title" style="font-size:14px; margin-top:15px;">Output</div>
+        <div class="panel-title" style="font-size:14px; margin-top:15px;">Port d'Eixida (OUT 0)</div>
         <div class="reg-box" style="text-align: center; background: #020617;">
             <span style="font-size: 24px; color: var(--accent-green); font-weight: bold;" id="portOut">0</span>
         </div>
@@ -225,7 +220,7 @@ HLT
 
 <script>
     let RAM = new Array(256).fill(0);
-    let PC = 0, IR = 0, AC = 0, X = 0, MAR = 0, MDR = 0;
+    let PC = 0, IR = 0, AC = 0, MAR = 0, MDR = 0;
     let FlagZ = false, FlagN = false, FlagE = false;
     let isRunning = false, runInterval = null;
 
@@ -244,11 +239,11 @@ HLT
     function createMemoryGrid() {
         const grid = document.getElementById('memGrid');
         grid.innerHTML = '';
-        for(let i = 0; i < 64; i++) {
+        for(let i = 0; i < 48; i++) { 
             let cell = document.createElement('div');
             cell.className = 'mem-cell';
             cell.id = `mem-${i}`;
-            cell.innerText = `[${i}]:00`;
+            cell.innerText = `${i.toString(16).toUpperCase().padStart(2,'0')}:00`;
             grid.appendChild(cell);
         }
     }
@@ -257,17 +252,20 @@ HLT
         document.getElementById('regPC').innerText = PC.toString(16).toUpperCase().padStart(2, '0');
         document.getElementById('regIR').innerText = IR.toString(16).toUpperCase().padStart(2, '0');
         document.getElementById('regAC').innerText = AC.toString(16).toUpperCase().padStart(2, '0');
-        document.getElementById('regX').innerText = X.toString(16).toUpperCase().padStart(2, '0');
         document.getElementById('regMAR').innerText = MAR.toString(16).toUpperCase().padStart(2, '0');
         document.getElementById('regMDR').innerText = MDR.toString(16).toUpperCase().padStart(2, '0');
         document.getElementById('flagZ').className = FlagZ ? 'flag active' : 'flag';
         document.getElementById('flagN').className = FlagN ? 'flag active' : 'flag';
         document.getElementById('flagE').className = FlagE ? 'flag active' : 'flag';
-        for(let i=0; i<64; i++) {
+        
+        for(let i=0; i<48; i++) {
             let cell = document.getElementById(`mem-${i}`);
-            if(cell) cell.innerText = `${i.toString(16).padStart(2,'0')}:${RAM[i].toString(16).padStart(2,'0')}`;
+            if(cell) {
+                cell.innerText = `${i.toString(16).toUpperCase().padStart(2,'0')}:${RAM[i].toString(16).toUpperCase().padStart(2,'0')}`;
+                cell.className = 'mem-cell' + (i === PC ? ' pc-highlight' : '');
+            }
         }
     }
 
     function log(msg, type='') {
-
+        document.getElementById('logBox').innerHTML = `<span class="${type}">${msg}</span><br/>` + document.getElementById('logBox').innerHTML;
