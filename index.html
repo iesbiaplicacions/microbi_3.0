@@ -1,1 +1,273 @@
-<h1>microBI_3.0</h1><hr>(cc)xaviblanes
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microbi 3.0 - Simulador Von Neumann Avançat</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--panel-bg);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { color: var(--accent-blue); font-size: 24px; }
+        .version { font-size: 12px; background: #334155; padding: 4px 8px; border-radius: 4px; }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 0.8fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #334155;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin-bottom: 12px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 5px;
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            background: #0f172a;
+            color: var(--accent-green);
+            border: 1px solid #334155;
+            padding: 10px;
+            resize: none;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        button {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button:hover { background: #475569; }
+        button.run { background: var(--accent-green); color: #0f172a; }
+        button.step { background: var(--accent-blue); color: #0f172a; }
+        button.reset { background: var(--accent-red); color: #0f172a; }
+
+        .registers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .reg-box {
+            background: #0f172a;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #334155;
+        }
+
+        .reg-label { font-size: 11px; color: var(--text-muted); }
+        .reg-val { font-size: 18px; font-weight: bold; color: var(--text-light); }
+
+        .flags-container {
+            display: flex;
+            gap: 10px;
+            background: #0f172a;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .flag { padding: 2px 6px; border-radius: 3px; font-size: 12px; background: #334155; color: var(--text-muted); }
+        .flag.active { background: var(--accent-red); color: white; font-weight: bold; }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .mem-cell {
+            background: #0f172a;
+            font-size: 11px;
+            text-align: center;
+            padding: 6px 2px;
+            border-radius: 3px;
+            border: 1px solid #1e293b;
+            cursor: pointer;
+        }
+        .mem-cell.pc-highlight { border: 1px solid var(--accent-blue); background: #0c4a6e; }
+        .mem-cell.mar-highlight { border: 1px solid var(--accent-red); }
+
+        .log-box {
+            flex: 1;
+            background: #0f172a;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            color: #cbd5e1;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .console-error { color: var(--accent-red); }
+        .console-success { color: var(--accent-green); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Microbi 3.0</h1>
+    <div class="version">Arquitectura Avançada Von Neumann (8-bit)</div>
+</header>
+
+<div class="main-layout">
+    <div class="panel">
+        <div class="panel-title">📝 Editor d'Assemblador (ASM)</div>
+        <textarea id="asmCode" spellcheck="false">
+; Programa d'exemple: Multiplicació Avançada
+LDA #12
+STA [30]
+LDA #5
+MUL [30]
+OUT 0
+HLT
+        </textarea>
+        <div class="controls">
+            <button onclick="assembleCode()">Assemblar</button>
+            <button class="step" onclick="cpuStep()">STEP</button>
+            <button class="reset" onclick="resetSystem()">RESET</button>
+        </div>
+        <div class="controls" style="margin-top: 5px; grid-template-columns: 1fr;">
+            <button class="run" onclick="toggleRun()" id="btnRun">RUN (Auto)</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">💻 Estat del Processador (CPU)</div>
+        <div class="registers-grid">
+            <div class="reg-box"><div class="reg-label">PC</div><div class="reg-val" id="regPC">00</div></div>
+            <div class="reg-box"><div class="reg-label">IR</div><div class="reg-val" id="regIR">00</div></div>
+            <div class="reg-box"><div class="reg-label">AC</div><div class="reg-val" id="regAC">00</div></div>
+            <div class="reg-box"><div class="reg-label">X</div><div class="reg-val" id="regX">00</div></div>
+            <div class="reg-box"><div class="reg-label">MAR</div><div class="reg-val" id="regMAR">00</div></div>
+            <div class="reg-box"><div class="reg-label">MDR</div><div class="reg-val" id="regMDR">00</div></div>
+        </div>
+        <div class="panel-title" style="font-size:14px;">Flags d'Estat</div>
+        <div class="flags-container">
+            <span class="flag" id="flagZ">Z</span>
+            <span class="flag" id="flagN">N</span>
+            <span class="flag" id="flagE">E</span>
+        </div>
+        <div class="panel-title" style="font-size:14px;">Historial de Logs</div>
+        <div class="log-box" id="logBox">Sistema preparat.</div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">💾 Mapa de Memòria (RAM)</div>
+        <div class="memory-grid" id="memGrid"></div>
+        <div class="panel-title" style="font-size:14px; margin-top:15px;">Output</div>
+        <div class="reg-box" style="text-align: center; background: #020617;">
+            <span style="font-size: 24px; color: var(--accent-green); font-weight: bold;" id="portOut">0</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let RAM = new Array(256).fill(0);
+    let PC = 0, IR = 0, AC = 0, X = 0, MAR = 0, MDR = 0;
+    let FlagZ = false, FlagN = false, FlagE = false;
+    let isRunning = false, runInterval = null;
+
+    const ISA = {
+        0x00: { name: 'LDA #', type: 'imm' }, 0x10: { name: 'LDA [', type: 'dir' },
+        0x20: { name: 'STA [', type: 'dir' }, 0x30: { name: 'ADD #', type: 'imm' },
+        0x40: { name: 'ADD [', type: 'dir' }, 0x50: { name: 'SUB #', type: 'imm' },
+        0x55: { name: 'SUB [', type: 'dir' }, 0xA0: { name: 'MUL #', type: 'imm' },
+        0xA5: { name: 'MUL [', type: 'dir' }, 0xB0: { name: 'DIV #', type: 'imm' },
+        0xB5: { name: 'DIV [', type: 'dir' }, 0xC0: { name: 'MOD #', type: 'imm' },
+        0xC5: { name: 'MOD [', type: 'dir' }, 0x60: { name: 'JMP ',  type: 'dir' },
+        0x70: { name: 'JZ ',   type: 'dir' }, 0x80: { name: 'OUT ',  type: 'imm' },
+        0xF0: { name: 'HLT',   type: 'inh' }
+    };
+
+    function createMemoryGrid() {
+        const grid = document.getElementById('memGrid');
+        grid.innerHTML = '';
+        for(let i = 0; i < 64; i++) {
+            let cell = document.createElement('div');
+            cell.className = 'mem-cell';
+            cell.id = `mem-${i}`;
+            cell.innerText = `[${i}]:00`;
+            grid.appendChild(cell);
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('regPC').innerText = PC.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('regIR').innerText = IR.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('regAC').innerText = AC.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('regX').innerText = X.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('regMAR').innerText = MAR.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('regMDR').innerText = MDR.toString(16).toUpperCase().padStart(2, '0');
+        document.getElementById('flagZ').className = FlagZ ? 'flag active' : 'flag';
+        document.getElementById('flagN').className = FlagN ? 'flag active' : 'flag';
+        document.getElementById('flagE').className = FlagE ? 'flag active' : 'flag';
+        for(let i=0; i<64; i++) {
+            let cell = document.getElementById(`mem-${i}`);
+            if(cell) cell.innerText = `${i.toString(16).padStart(2,'0')}:${RAM[i].toString(16).padStart(2,'0')}`;
+        }
+    }
+
+    function log(msg, type='') {
+
